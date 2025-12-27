@@ -23,28 +23,27 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* FIX STRUTTURALE IOS - "Strategia Nucleare" */
+/* FIX STRUTTURALE V24 */
 html, body {
     margin: 0; 
     padding: 0;
-    width: 100%;
-    height: 100dvh; /* Usa altezza dinamica del viewport */
-    overflow: hidden; /* VIETA lo scroll alla pagina principale */
-    position: fixed; /* Inchioda la pagina allo schermo */
+    width: 100%; /* Fix: Usa % invece di vw per evitare shift laterali */
+    height: 100dvh; /* Altezza precisa viewport */
+    overflow: hidden; 
+    position: fixed; 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
 }
 
-/* Container principale che gestisce il layout a colonna */
 body {
     display: flex;
     flex-direction: column;
 }
 
-/* HEADER FISSO */
+/* HEADER */
 header {
-    flex: 0 0 auto; /* Non si ridimensiona mai */
+    flex: 0 0 auto;
     padding: 10px 15px;
     padding-top: max(10px, env(safe-area-inset-top));
     background: var(--nav-bg);
@@ -52,38 +51,81 @@ header {
     border-bottom: 1px solid var(--border-color);
     display: flex; justify-content: space-between; align-items: center;
     z-index: 100;
-    touch-action: none; /* IMPEDISCE LO SCROLL TOCCANDO QUI */
+    touch-action: none;
 }
 header h2 { margin: 0; font-size: 18px; }
 .header-actions button { background: none; border: none; font-size: 20px; color: var(--accent-color); margin-left: 15px; }
 
-/* MAIN SCROLLABILE */
+/* MAIN */
 main {
-    flex: 1; /* Occupa tutto lo spazio rimanente tra header e footer */
-    overflow-y: auto; /* Abilita lo scroll SOLO qui dentro */
-    -webkit-overflow-scrolling: touch; /* Scroll fluido "nativo" su iOS */
+    flex: 1; 
+    overflow-y: auto; 
+    -webkit-overflow-scrolling: touch; 
     padding: 15px;
-    padding-bottom: 30px; /* Spazio extra in fondo */
-    overscroll-behavior-y: contain; /* Evita che lo scroll si propaghi al body */
+    padding-bottom: 20px;
+    overscroll-behavior-y: contain;
+    width: 100%;
 }
 
-/* NAVBAR FISSA */
+/* NAVBAR FISSA (FIX POSIZIONAMENTO) */
 .bottom-nav {
-    flex: 0 0 auto; /* Non si ridimensiona mai */
+    flex: 0 0 auto; 
     background: var(--nav-bg); 
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--border-color);
-    display: flex; justify-content: space-between;
-    padding-bottom: env(safe-area-inset-bottom); 
-    height: 85px; 
-    padding-left: 10px; padding-right: 10px; padding-top: 5px; 
+    display: flex; 
+    justify-content: space-between; /* Spazia equamente i tasti */
+    align-items: flex-start;
+    
+    /* FIX ALTEZZA: Rimuovo altezza fissa, lascio che il padding gestisca lo spazio */
+    padding-top: 8px;
+    /*padding-bottom: env(safe-area-inset-bottom); */
+    /* Aggiungo un minimo di 20px se non c'è la safe area, altrimenti usa quella di iOS */
+    padding-bottom: max(15px, env(safe-area-inset-bottom)); 
+    
+    width: 100%;
     z-index: 200;
-    touch-action: none; /* IMPEDISCE LO SCROLL TOCCANDO QUI */
+    touch-action: none;
 }
 
-/* Stili esistenti... */
-.screen { display: none; height: 100%; width: 100%; flex-direction: column; } /* Nota: height 100% ora si riferisce al flex container */
-.screen.active { display: flex; flex: 1; overflow: hidden; } /* La schermata attiva occupa tutto lo spazio */
+/* Navbar Buttons (FIX LARGHEZZA) */
+.nav-btn {
+    background: none; border: none;
+    flex: 1; /* Occupa tutto lo spazio disponibile */
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    color: #8e8e93; font-size: 10px;
+    min-width: 0; /* Permette di restringersi se necessario */
+    padding: 0; /* Rimosso padding laterale che stringeva troppo */
+}
+.nav-btn i { font-size: 22px; margin-bottom: 4px; }
+.nav-btn.active { color: var(--accent-color); }
+
+/* Cart Button */
+.cart-wrapper { 
+    position: relative; 
+    top: -30px; /* Spostato un po' più su per staccarlo bene */
+    width: 70px; 
+    flex-shrink: 0; /* Non si schiaccia mai */
+    display: flex; justify-content: center; 
+}
+.cart-main-btn {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: var(--accent-color); color: white; border: 4px solid var(--bg-color);
+    font-size: 24px; box-shadow: 0 4px 10px rgba(0,122,255,0.4);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    position: relative; z-index: 201;
+}
+.badge {
+    position: absolute; top: -2px; right: -2px; background-color: var(--danger-color);
+    color: white; font-size: 11px; font-weight: bold;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--bg-color);
+}
+
+/* SCREENS */
+.screen { display: none; height: 100%; width: 100%; flex-direction: column; }
+.screen.active { display: flex; flex: 1; overflow: hidden; }
 
 #welcome-screen {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -100,7 +142,7 @@ main {
 /* SEARCH BAR */
 .search-container {
     position: sticky; top: 0; 
-    background-color: transparent; /* Trasparente per non rompere il notepad */
+    background-color: transparent; 
     padding-bottom: 10px; z-index: 90; margin-bottom: 5px;
 }
 .search-input {
@@ -137,7 +179,7 @@ main {
 .btn-add { color: var(--accent-color); }
 .btn-del { color: var(--border-color); }
 
-/* Cart */
+/* Cart Items */
 .cart-group { margin-bottom: 25px; }
 .cart-group-title { 
     font-size: 14px; color: var(--text-color); opacity: 0.7; 
@@ -161,16 +203,6 @@ main {
 .cart-item.is-completed .cart-item-name, .cart-item.is-completed .cart-item-qty, .cart-item.is-completed .cart-item-note { text-decoration: line-through; color: gray; }
 .cart-item.is-completed .cart-item-details { border-left-color: gray; }
 .btn-restore { color: var(--accent-color); font-size: 22px; }
-
-/* Navbar Buttons */
-.nav-btn { background: none; border: none; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; color: #8e8e93; font-size: 10px; min-width: 45px; }
-.nav-btn i { font-size: 22px; margin-bottom: 5px; margin-top: 5px; }
-.nav-btn.active { color: var(--accent-color); }
-
-/* Cart Button */
-.cart-wrapper { position: relative; top: -25px; width: 70px; display: flex; justify-content: center; }
-.cart-main-btn { width: 60px; height: 60px; border-radius: 50%; background: var(--accent-color); color: white; border: 4px solid var(--bg-color); font-size: 24px; box-shadow: 0 4px 10px rgba(0,122,255,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; z-index: 201; }
-.badge { position: absolute; top: -2px; right: -2px; background-color: var(--danger-color); color: white; font-size: 11px; font-weight: bold; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-color); }
 
 /* Toast */
 .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background-color: rgba(50, 50, 50, 0.9); color: white; padding: 12px 24px; border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: opacity 0.3s, visibility 0.3s; opacity: 1; visibility: visible; text-align: center; white-space: nowrap; }
