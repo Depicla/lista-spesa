@@ -23,14 +23,14 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* FIX STRUTTURALE V26 - LAYOUT COMPATTO */
+/* LAYOUT FISSO */
 html, body {
     margin: 0; 
     padding: 0;
     width: 100%; 
-    height: 100dvh; /* Altezza dinamica viewport */
+    height: 100dvh; 
     overflow: hidden; 
-    position: fixed; /* Inchioda la pagina */
+    position: fixed; 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
@@ -63,13 +63,12 @@ main {
     overflow-y: auto; 
     -webkit-overflow-scrolling: touch; 
     padding: 15px;
-    /* Riduciamo il padding finale dato che la navbar ora è più bassa */
-    padding-bottom: 100px; 
+    padding-bottom: 100px; /* Spazio per non coprire l'ultimo elemento */
     overscroll-behavior-y: contain;
     width: 100%;
 }
 
-/* NAVBAR FISSA - FIX ALTEZZA */
+/* NAVBAR (FIX ALTEZZA RIDOTTA) */
 .bottom-nav {
     flex: 0 0 auto; 
     background: var(--nav-bg); 
@@ -78,47 +77,47 @@ main {
     
     display: flex; 
     justify-content: space-around; 
-    align-items: flex-start; /* Spinge le icone verso l'alto */
+    align-items: center; /* Centra verticalmente le icone */
     
     width: 100%;
     position: fixed;
-    bottom: 0;
+    bottom: 0 !important; /* Forza l'ancoraggio in basso */
     left: 0;
     
-    /* FORMULA MAGICA PER IPHONE */
-    /* Altezza fissa per i tasti (55px) + Spazio nero iPhone */
-    height: calc(55px + env(safe-area-inset-bottom)); 
+    /* Altezza manuale compatta */
+    height: auto; 
+    min-height: 65px; 
     
-    /* Spazio interno: Solo 5px sopra, e sotto usiamo l'area sicura */
+    /* Padding ridotto: Ignoriamo parzialmente la safe area per abbassare tutto */
     padding-top: 5px;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: 20px; /* Fisso: molto meno spazio vuoto sotto */
     
     z-index: 200;
     touch-action: none;
 }
 
-/* Navbar Buttons */
+/* Tasti Navbar */
 .nav-btn {
     background: none; border: none;
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
     color: #8e8e93; font-size: 10px;
     padding: 0;
     width: 50px;
-    height: 50px; /* Forza altezza tasto per stare nei 55px disponibili */
+    height: 40px; /* Altezza definita per i tasti */
 }
-.nav-btn i { font-size: 24px; margin-bottom: 2px; }
+.nav-btn i { font-size: 22px; margin-bottom: 2px; }
 .nav-btn span { line-height: 1; display: block; }
 .nav-btn.active { color: var(--accent-color); }
 
-/* Cart Button Wrapper */
+/* Tasto Carrello (Ricalibrato per la barra bassa) */
 .cart-wrapper { 
     position: relative; 
-    top: -20px; /* Meno aggressivo di prima (-25), così non vola via */
+    top: -25px; /* Lo fa sporgere */
     width: 60px; 
     display: flex; justify-content: center; 
     flex-shrink: 0;
     z-index: 202;
-    height: 50px; /* Stessa altezza degli altri per allineamento */
+    height: 40px; 
 }
 .cart-main-btn {
     width: 56px; height: 56px; border-radius: 50%;
@@ -134,7 +133,11 @@ main {
     border: 2px solid var(--bg-color);
 }
 
-/* SCREENS */
+/* Toast */
+.toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background-color: rgba(50, 50, 50, 0.9); color: white; padding: 12px 24px; border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: opacity 0.3s, visibility 0.3s; opacity: 1; visibility: visible; text-align: center; white-space: nowrap; }
+.toast.hidden { opacity: 0; visibility: hidden; }
+
+/* Schermate */
 .screen { display: none; height: 100%; width: 100%; flex-direction: column; }
 .screen.active { display: flex; flex: 1; overflow: hidden; }
 
@@ -150,7 +153,7 @@ main {
     border: none; background: white; color: #007aff; font-weight: bold; cursor: pointer; margin-top: 20px;
 }
 
-/* SEARCH BAR */
+/* Search */
 .search-container {
     position: sticky; top: 0; 
     background-color: transparent; 
@@ -164,7 +167,7 @@ main {
 }
 .search-input:focus { border-color: var(--accent-color); }
 
-/* NOTEPAD STYLE */
+/* Notepad */
 .notepad-mode {
     background-color: var(--notepad-bg);
     background-image: linear-gradient(var(--notepad-line) 1px, transparent 1px);
@@ -173,7 +176,7 @@ main {
 }
 .notepad-content { padding-bottom: 20px; }
 
-/* Items List */
+/* Liste */
 .item-row {
     background: var(--card-color); padding: 12px; margin-bottom: 8px; border-radius: 10px;
     display: flex; justify-content: space-between; align-items: center;
@@ -190,7 +193,7 @@ main {
 .btn-add { color: var(--accent-color); }
 .btn-del { color: var(--border-color); }
 
-/* Cart Items */
+/* Cart */
 .cart-group { margin-bottom: 25px; }
 .cart-group-title { 
     font-size: 14px; color: var(--text-color); opacity: 0.7; 
@@ -207,17 +210,13 @@ main {
 .cart-item-note { display: block; font-size: 12px; color: gray; font-style: italic; }
 .cart-actions-btn { display: flex; gap: 15px; align-items: center; }
 
-/* Completed Items */
+/* Completed */
 .completed-section { margin-top: 40px; padding-top: 20px; border-top: 2px dashed var(--border-color); opacity: 0.6; }
 .completed-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 .btn-clean-completed { background: var(--danger-color); color: white; border: none; border-radius: 15px; padding: 5px 12px; font-size: 12px; font-weight: bold; cursor: pointer; }
 .cart-item.is-completed .cart-item-name, .cart-item.is-completed .cart-item-qty, .cart-item.is-completed .cart-item-note { text-decoration: line-through; color: gray; }
 .cart-item.is-completed .cart-item-details { border-left-color: gray; }
 .btn-restore { color: var(--accent-color); font-size: 22px; }
-
-/* Toast */
-.toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background-color: rgba(50, 50, 50, 0.9); color: white; padding: 12px 24px; border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: opacity 0.3s, visibility 0.3s; opacity: 1; visibility: visible; text-align: center; white-space: nowrap; }
-.toast.hidden { opacity: 0; visibility: hidden; }
 
 /* Modals */
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 300; align-items: center; justify-content: center; }
