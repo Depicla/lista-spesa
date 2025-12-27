@@ -23,12 +23,12 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* FIX STRUTTURALE V25 - BODY BLOCCATO */
+/* FIX STRUTTURALE V26 - LAYOUT COMPATTO */
 html, body {
     margin: 0; 
     padding: 0;
     width: 100%; 
-    height: 100dvh; /* Altezza precisa viewport */
+    height: 100dvh; /* Altezza dinamica viewport */
     overflow: hidden; 
     position: fixed; /* Inchioda la pagina */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -57,18 +57,19 @@ header {
 header h2 { margin: 0; font-size: 18px; }
 .header-actions button { background: none; border: none; font-size: 20px; color: var(--accent-color); margin-left: 15px; }
 
-/* MAIN - SCROLLABILE */
+/* MAIN */
 main {
     flex: 1; 
     overflow-y: auto; 
     -webkit-overflow-scrolling: touch; 
     padding: 15px;
-    padding-bottom: 20px;
+    /* Riduciamo il padding finale dato che la navbar ora è più bassa */
+    padding-bottom: 100px; 
     overscroll-behavior-y: contain;
     width: 100%;
 }
 
-/* NAVBAR FISSA (CORREZIONE ALTEZZA E CENTRATURA) */
+/* NAVBAR FISSA - FIX ALTEZZA */
 .bottom-nav {
     flex: 0 0 auto; 
     background: var(--nav-bg); 
@@ -76,16 +77,21 @@ main {
     border-top: 1px solid var(--border-color);
     
     display: flex; 
-    justify-content: space-around; /* FIX CENTRATURA: Spazia equamente i tasti */
-    align-items: flex-start;
+    justify-content: space-around; 
+    align-items: flex-start; /* Spinge le icone verso l'alto */
     
     width: 100%;
-    margin: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
     
-    /* FIX ALTEZZA: Riduciamo al minimo indispensabile */
-    padding-top: 6px; 
-    /* Usa SOLO la safe area, se c'è. Se è 0 (vecchi tel), usa 15px per non toccare il bordo */
-    padding-bottom: env(safe-area-inset-bottom, 15px); 
+    /* FORMULA MAGICA PER IPHONE */
+    /* Altezza fissa per i tasti (55px) + Spazio nero iPhone */
+    height: calc(55px + env(safe-area-inset-bottom)); 
+    
+    /* Spazio interno: Solo 5px sopra, e sotto usiamo l'area sicura */
+    padding-top: 5px;
+    padding-bottom: env(safe-area-inset-bottom);
     
     z-index: 200;
     touch-action: none;
@@ -97,22 +103,25 @@ main {
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     color: #8e8e93; font-size: 10px;
     padding: 0;
-    width: 50px; /* Larghezza fissa per stabilità */
+    width: 50px;
+    height: 50px; /* Forza altezza tasto per stare nei 55px disponibili */
 }
-.nav-btn i { font-size: 24px; margin-bottom: 3px; }
+.nav-btn i { font-size: 24px; margin-bottom: 2px; }
+.nav-btn span { line-height: 1; display: block; }
 .nav-btn.active { color: var(--accent-color); }
 
 /* Cart Button Wrapper */
 .cart-wrapper { 
     position: relative; 
-    top: -25px; /* Tiriamo su il bottone centrale */
+    top: -20px; /* Meno aggressivo di prima (-25), così non vola via */
     width: 60px; 
     display: flex; justify-content: center; 
     flex-shrink: 0;
-    z-index: 202; /* Sopra a tutto */
+    z-index: 202;
+    height: 50px; /* Stessa altezza degli altri per allineamento */
 }
 .cart-main-btn {
-    width: 58px; height: 58px; border-radius: 50%;
+    width: 56px; height: 56px; border-radius: 50%;
     background: var(--accent-color); color: white; border: 4px solid var(--bg-color);
     font-size: 22px; box-shadow: 0 4px 10px rgba(0,122,255,0.4);
     cursor: pointer; display: flex; align-items: center; justify-content: center;
