@@ -23,7 +23,7 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* LAYOUT FISSO */
+/* LAYOUT FISSO (V28) */
 html, body {
     margin: 0; 
     padding: 0;
@@ -32,7 +32,7 @@ html, body {
     overflow: hidden; 
     position: fixed; 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: var(--bg-color);
+    background-color: var(--bg-color); /* Se vedi grigio è questo colore qui */
     color: var(--text-color);
 }
 
@@ -63,61 +63,66 @@ main {
     overflow-y: auto; 
     -webkit-overflow-scrolling: touch; 
     padding: 15px;
-    padding-bottom: 100px; /* Spazio per non coprire l'ultimo elemento */
+    padding-bottom: 110px; /* Spazio extra per lo scroll */
     overscroll-behavior-y: contain;
     width: 100%;
 }
 
-/* NAVBAR (FIX ALTEZZA RIDOTTA) */
+/* NAVBAR (FIX FASCIA GRIGIA) */
 .bottom-nav {
     flex: 0 0 auto; 
-    background: var(--nav-bg); 
+    background: var(--nav-bg); /* Questo colore ora coprirà la fascia grigia */
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--border-color);
     
     display: flex; 
     justify-content: space-around; 
-    align-items: center; /* Centra verticalmente le icone */
+    align-items: center;
     
     width: 100%;
     position: fixed;
-    bottom: 0 !important; /* Forza l'ancoraggio in basso */
+    bottom: 0 !important;
     left: 0;
     
-    /* Altezza manuale compatta */
-    height: auto; 
-    min-height: 65px; 
+    /* 1. Altezza automatica basata sul contenuto + safe area */
+    height: auto;
     
-    /* Padding ridotto: Ignoriamo parzialmente la safe area per abbassare tutto */
-    padding-top: 5px;
-    padding-bottom: 20px; /* Fisso: molto meno spazio vuoto sotto */
+    /* 2. Padding Sotto: Usa TASSATIVAMENTE la safe-area per coprire il grigio */
+    padding-bottom: env(safe-area-inset-bottom);
+    
+    /* 3. Padding Sopra: 0 per mantenere la barra bassa e slim */
+    padding-top: 5px; 
+    
+    /* Se il telefono non ha safe area (vecchi iPhone), aggiungi un minimo */
+    padding-bottom: max(15px, env(safe-area-inset-bottom));
     
     z-index: 200;
     touch-action: none;
 }
 
-/* Tasti Navbar */
+/* Tasti */
 .nav-btn {
     background: none; border: none;
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
     color: #8e8e93; font-size: 10px;
     padding: 0;
     width: 50px;
-    height: 40px; /* Altezza definita per i tasti */
+    height: 44px; /* Altezza standard Apple */
+    margin-bottom: 2px; /* Piccola correzione ottica */
 }
-.nav-btn i { font-size: 22px; margin-bottom: 2px; }
+.nav-btn i { font-size: 24px; margin-bottom: 2px; }
 .nav-btn span { line-height: 1; display: block; }
 .nav-btn.active { color: var(--accent-color); }
 
-/* Tasto Carrello (Ricalibrato per la barra bassa) */
+/* Carrello */
 .cart-wrapper { 
     position: relative; 
-    top: -25px; /* Lo fa sporgere */
+    top: -22px; /* Sporge il giusto */
     width: 60px; 
     display: flex; justify-content: center; 
     flex-shrink: 0;
     z-index: 202;
-    height: 40px; 
+    height: 44px; 
 }
 .cart-main-btn {
     width: 56px; height: 56px; border-radius: 50%;
@@ -134,10 +139,10 @@ main {
 }
 
 /* Toast */
-.toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background-color: rgba(50, 50, 50, 0.9); color: white; padding: 12px 24px; border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: opacity 0.3s, visibility 0.3s; opacity: 1; visibility: visible; text-align: center; white-space: nowrap; }
+.toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background-color: rgba(50, 50, 50, 0.9); color: white; padding: 12px 24px; border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: opacity 0.3s, visibility 0.3s; opacity: 1; visibility: visible; text-align: center; white-space: nowrap; }
 .toast.hidden { opacity: 0; visibility: hidden; }
 
-/* Schermate */
+/* Screens */
 .screen { display: none; height: 100%; width: 100%; flex-direction: column; }
 .screen.active { display: flex; flex: 1; overflow: hidden; }
 
@@ -176,7 +181,7 @@ main {
 }
 .notepad-content { padding-bottom: 20px; }
 
-/* Liste */
+/* Lists */
 .item-row {
     background: var(--card-color); padding: 12px; margin-bottom: 8px; border-radius: 10px;
     display: flex; justify-content: space-between; align-items: center;
@@ -193,7 +198,7 @@ main {
 .btn-add { color: var(--accent-color); }
 .btn-del { color: var(--border-color); }
 
-/* Cart */
+/* Cart items */
 .cart-group { margin-bottom: 25px; }
 .cart-group-title { 
     font-size: 14px; color: var(--text-color); opacity: 0.7; 
