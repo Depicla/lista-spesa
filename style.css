@@ -23,36 +23,28 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-body {
-    margin: 0; padding: 0;
+/* FIX STRUTTURALE IOS - "Strategia Nucleare" */
+html, body {
+    margin: 0; 
+    padding: 0;
+    width: 100%;
+    height: 100dvh; /* Usa altezza dinamica del viewport */
+    overflow: hidden; /* VIETA lo scroll alla pagina principale */
+    position: fixed; /* Inchioda la pagina allo schermo */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
-    height: 100vh; /* Altezza fissa viewport */
-    width: 100vw;
-    overflow: hidden; /* Evita scroll del body, scrolliamo solo il main */
+}
+
+/* Container principale che gestisce il layout a colonna */
+body {
     display: flex;
     flex-direction: column;
 }
 
-/* Welcome Screen */
-.screen { display: none; height: 100%; width: 100%; flex-direction: column; }
-.screen.active { display: flex; }
-#welcome-screen {
-    justify-content: center; align-items: center;
-    background: linear-gradient(135deg, #007aff, #34c759);
-    color: white;
-    z-index: 1000;
-}
-.welcome-content { text-align: center; }
-.welcome-content button {
-    padding: 15px 30px; font-size: 18px; border-radius: 25px;
-    border: none; background: white; color: #007aff; font-weight: bold; cursor: pointer; margin-top: 20px;
-}
-
-/* Header */
+/* HEADER FISSO */
 header {
-    flex-shrink: 0; /* Non si rimpicciolisce */
+    flex: 0 0 auto; /* Non si ridimensiona mai */
     padding: 10px 15px;
     padding-top: max(10px, env(safe-area-inset-top));
     background: var(--nav-bg);
@@ -60,31 +52,60 @@ header {
     border-bottom: 1px solid var(--border-color);
     display: flex; justify-content: space-between; align-items: center;
     z-index: 100;
+    touch-action: none; /* IMPEDISCE LO SCROLL TOCCANDO QUI */
 }
 header h2 { margin: 0; font-size: 18px; }
 .header-actions button { background: none; border: none; font-size: 20px; color: var(--accent-color); margin-left: 15px; }
 
-/* Main (FIX SCROLL QUI) */
+/* MAIN SCROLLABILE */
 main {
-    flex-grow: 1; /* Occupa tutto lo spazio disponibile */
-    overflow-y: auto; /* Abilita lo scroll verticale */
-    -webkit-overflow-scrolling: touch; /* Scroll fluido su iOS */
+    flex: 1; /* Occupa tutto lo spazio rimanente tra header e footer */
+    overflow-y: auto; /* Abilita lo scroll SOLO qui dentro */
+    -webkit-overflow-scrolling: touch; /* Scroll fluido "nativo" su iOS */
     padding: 15px;
-    padding-bottom: 140px; /* SPAZIO EXTRA PER EVITARE CHE L'ULTIMO ITEM SIA COPERTO */
-    position: relative;
+    padding-bottom: 30px; /* Spazio extra in fondo */
+    overscroll-behavior-y: contain; /* Evita che lo scroll si propaghi al body */
 }
 
-/* SEARCH BAR STYLE */
+/* NAVBAR FISSA */
+.bottom-nav {
+    flex: 0 0 auto; /* Non si ridimensiona mai */
+    background: var(--nav-bg); 
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border-color);
+    display: flex; justify-content: space-between;
+    padding-bottom: env(safe-area-inset-bottom); 
+    height: 85px; 
+    padding-left: 10px; padding-right: 10px; padding-top: 5px; 
+    z-index: 200;
+    touch-action: none; /* IMPEDISCE LO SCROLL TOCCANDO QUI */
+}
+
+/* Stili esistenti... */
+.screen { display: none; height: 100%; width: 100%; flex-direction: column; } /* Nota: height 100% ora si riferisce al flex container */
+.screen.active { display: flex; flex: 1; overflow: hidden; } /* La schermata attiva occupa tutto lo spazio */
+
+#welcome-screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    justify-content: center; align-items: center;
+    background: linear-gradient(135deg, #007aff, #34c759);
+    color: white; z-index: 1000;
+}
+.welcome-content { text-align: center; }
+.welcome-content button {
+    padding: 15px 30px; font-size: 18px; border-radius: 25px;
+    border: none; background: white; color: #007aff; font-weight: bold; cursor: pointer; margin-top: 20px;
+}
+
+/* SEARCH BAR */
 .search-container {
     position: sticky; top: 0; 
-    background-color: transparent; /* Fix per non coprire sfondo notepad */
-    padding-bottom: 10px; z-index: 90;
-    margin-bottom: 5px;
+    background-color: transparent; /* Trasparente per non rompere il notepad */
+    padding-bottom: 10px; z-index: 90; margin-bottom: 5px;
 }
 .search-input {
     width: 100%; padding: 10px 15px; border-radius: 10px;
-    border: 1px solid var(--border-color);
-    background-color: var(--card-color);
+    border: 1px solid var(--border-color); background-color: var(--card-color);
     color: var(--text-color); font-size: 16px; outline: none;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
@@ -95,14 +116,13 @@ main {
     background-color: var(--notepad-bg);
     background-image: linear-gradient(var(--notepad-line) 1px, transparent 1px);
     background-size: 100% 40px;
-    background-attachment: local; /* Lo sfondo scorre col contenuto */
+    background-attachment: local;
 }
 .notepad-content { padding-bottom: 20px; }
 
 /* Items List */
 .item-row {
-    background: var(--card-color);
-    padding: 12px; margin-bottom: 8px; border-radius: 10px;
+    background: var(--card-color); padding: 12px; margin-bottom: 8px; border-radius: 10px;
     display: flex; justify-content: space-between; align-items: center;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
@@ -117,7 +137,7 @@ main {
 .btn-add { color: var(--accent-color); }
 .btn-del { color: var(--border-color); }
 
-/* Cart Styling */
+/* Cart */
 .cart-group { margin-bottom: 25px; }
 .cart-group-title { 
     font-size: 14px; color: var(--text-color); opacity: 0.7; 
@@ -125,11 +145,8 @@ main {
     background: var(--nav-bg); display: inline-block; padding: 2px 5px; border-radius: 4px;
 }
 .cart-item {
-    background: transparent;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    padding: 10px 0;
-    display: flex; justify-content: space-between; align-items: flex-start;
-    min-height: 40px;
+    background: transparent; border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 10px 0; display: flex; justify-content: space-between; align-items: flex-start; min-height: 40px;
 }
 .cart-item-details { flex: 1; padding-left: 10px; border-left: 3px solid var(--accent-color); }
 .cart-item-name { font-size: 18px; font-weight: 600; font-family: 'Marker Felt', sans-serif; }
@@ -137,90 +154,32 @@ main {
 .cart-item-note { display: block; font-size: 12px; color: gray; font-style: italic; }
 .cart-actions-btn { display: flex; gap: 15px; align-items: center; }
 
-/* COMPLETED ITEMS STYLE */
-.completed-section {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 2px dashed var(--border-color);
-    opacity: 0.6; 
-}
-.completed-header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
-}
-.btn-clean-completed {
-    background: var(--danger-color); color: white; border: none;
-    border-radius: 15px; padding: 5px 12px; font-size: 12px; font-weight: bold; cursor: pointer;
-}
-.cart-item.is-completed .cart-item-name, 
-.cart-item.is-completed .cart-item-qty,
-.cart-item.is-completed .cart-item-note {
-    text-decoration: line-through;
-    color: gray;
-}
+/* Completed Items */
+.completed-section { margin-top: 40px; padding-top: 20px; border-top: 2px dashed var(--border-color); opacity: 0.6; }
+.completed-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.btn-clean-completed { background: var(--danger-color); color: white; border: none; border-radius: 15px; padding: 5px 12px; font-size: 12px; font-weight: bold; cursor: pointer; }
+.cart-item.is-completed .cart-item-name, .cart-item.is-completed .cart-item-qty, .cart-item.is-completed .cart-item-note { text-decoration: line-through; color: gray; }
 .cart-item.is-completed .cart-item-details { border-left-color: gray; }
 .btn-restore { color: var(--accent-color); font-size: 22px; }
 
-/* Navbar */
-.bottom-nav {
-    flex-shrink: 0; /* Non si rimpicciolisce */
-    background: var(--nav-bg); backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border-color);
-    display: flex; justify-content: space-between;
-    padding-bottom: env(safe-area-inset-bottom); height: 85px; 
-    padding-left: 10px; padding-right: 10px; padding-top: 5px; 
-    z-index: 200;
-}
-.nav-btn {
-    background: none; border: none;
-    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-    color: #8e8e93; font-size: 10px;
-    min-width: 45px;
-}
+/* Navbar Buttons */
+.nav-btn { background: none; border: none; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; color: #8e8e93; font-size: 10px; min-width: 45px; }
 .nav-btn i { font-size: 22px; margin-bottom: 5px; margin-top: 5px; }
 .nav-btn.active { color: var(--accent-color); }
 
 /* Cart Button */
 .cart-wrapper { position: relative; top: -25px; width: 70px; display: flex; justify-content: center; }
-.cart-main-btn {
-    width: 60px; height: 60px; border-radius: 50%;
-    background: var(--accent-color); color: white; border: 4px solid var(--bg-color);
-    font-size: 24px; box-shadow: 0 4px 10px rgba(0,122,255,0.4);
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    position: relative; z-index: 201;
-}
-.badge {
-    position: absolute; top: -2px; right: -2px; background-color: var(--danger-color);
-    color: white; font-size: 11px; font-weight: bold;
-    width: 20px; height: 20px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    border: 2px solid var(--bg-color);
-}
+.cart-main-btn { width: 60px; height: 60px; border-radius: 50%; background: var(--accent-color); color: white; border: 4px solid var(--bg-color); font-size: 24px; box-shadow: 0 4px 10px rgba(0,122,255,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; z-index: 201; }
+.badge { position: absolute; top: -2px; right: -2px; background-color: var(--danger-color); color: white; font-size: 11px; font-weight: bold; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg-color); }
 
 /* Toast */
-.toast {
-    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-    background-color: rgba(50, 50, 50, 0.9); color: white;
-    padding: 12px 24px; border-radius: 25px; font-size: 14px; font-weight: 600;
-    z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    transition: opacity 0.3s, visibility 0.3s; opacity: 1; visibility: visible;
-    text-align: center; white-space: nowrap;
-}
+.toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background-color: rgba(50, 50, 50, 0.9); color: white; padding: 12px 24px; border-radius: 25px; font-size: 14px; font-weight: 600; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: opacity 0.3s, visibility 0.3s; opacity: 1; visibility: visible; text-align: center; white-space: nowrap; }
 .toast.hidden { opacity: 0; visibility: hidden; }
 
 /* Modals */
-.modal {
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5); z-index: 300; align-items: center; justify-content: center;
-}
-.modal-content {
-    background: var(--card-color); width: 85%; max-width: 320px;
-    padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-}
-.modal-content input, .modal-content select {
-    width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 10px;
-    border-radius: 8px; border: 1px solid var(--border-color);
-    background: var(--bg-color); color: var(--text-color); font-size: 16px;
-}
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 300; align-items: center; justify-content: center; }
+.modal-content { background: var(--card-color); width: 85%; max-width: 320px; padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.modal-content input, .modal-content select { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); font-size: 16px; }
 .qty-row { display: flex; gap: 10px; }
 .qty-group, .unit-group { flex: 1; }
 .modal-actions { margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px; }
