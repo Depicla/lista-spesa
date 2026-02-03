@@ -1,4 +1,4 @@
-/* SHOPPING_LIST_REV.22_SCROLL_STYLE_FIX */
+/* SHOPPING_LIST_REV.29_QUICK_ADD */
 
 // --- 1. CONFIGURAZIONE FIREBASE ---
 const firebaseConfig = {
@@ -61,7 +61,7 @@ const fullSeasonalData = {
 const defaultData = {
     lists: { "Shopping List": [] },
     currentList: "Shopping List",
-    stores: ["Supermercato", "Frutteto"],
+    stores: ["Supermercato", "Frutteto", "Altro", "Farmacia", "Posta"], // Aggiungo qualche negozio utile
     inventory: {
         frutta: [], verdura: [],
         latticini: ["Latte", "Burro", "Yogurt", "Formaggio", "Mozzarella", "Panna", "Parmigiano", "Ricotta"],
@@ -79,17 +79,15 @@ let currentSearchTerm = "";
 // --- AVVIO E SYNC ---
 document.addEventListener('DOMContentLoaded', () => {
     
-    // 1. Timer sicurezza per sblocco UI
     setTimeout(() => {
         const loader = document.getElementById('loading-overlay');
         if(loader && loader.style.display !== 'none') {
             loader.style.display = 'none';
-            isDataLoaded = true; // Permetti uso locale
+            isDataLoaded = true;
         }
     }, 2000);
 
     if(db) {
-        // 2. Monitoraggio Stato Connessione (Pallino)
         db.ref(".info/connected").on("value", (snap) => {
             const title = document.getElementById('page-title');
             const isConnected = snap.val() === true;
@@ -97,19 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if(title) title.innerHTML = `Shopping List <span onclick="triggerManualSync()" style="color:${color}; font-size:14px; cursor:pointer;">●</span>`;
         });
 
-        // 3. EVENTO: Il telefono torna online
-        window.addEventListener('online', () => {
-            performDoubleSync("Rete rilevata");
-        });
-
-        // 4. EVENTO: L'app torna in primo piano
+        window.addEventListener('online', () => { performDoubleSync("Rete rilevata"); });
         document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === 'visible') {
-                performDoubleSync("App attiva");
-            }
+            if (document.visibilityState === 'visible') { performDoubleSync("App attiva"); }
         });
 
-        // 5. Listener Dati (Sincronizzazione)
         db.ref('shoppingApp_V12').on('value', (snapshot) => {
             const data = snapshot.val();
             const loader = document.getElementById('loading-overlay');
@@ -117,12 +107,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data) {
                 appState = data;
-                // Patch sicurezza
                 if (!appState.lists) appState.lists = { "Shopping List": [] };
                 if (!appState.lists[appState.currentList]) appState.currentList = Object.keys(appState.lists)[0] || "Shopping List";
                 if (!appState.seasonalData) appState.seasonalData = JSON.parse(JSON.stringify(fullSeasonalData));
                 if (!appState.inventory) appState.inventory = JSON.parse(JSON.stringify(defaultData.inventory));
-                
                 populateInventoryFromSeason();
             } else {
                 restoreDefaults();
@@ -131,19 +119,14 @@ document.addEventListener('DOMContentLoaded', () => {
             refreshUI();
         });
     } else {
-        // Se DB non configurato, sblocca comunque
         document.getElementById('loading-overlay').style.display = 'none';
         isDataLoaded = true;
     }
 });
 
-// --- SISTEMA DOPPIA SINCRONIZZAZIONE ---
 function performDoubleSync(reason) {
     triggerManualSync(); 
-    setTimeout(() => {
-        isReconnecting = false; 
-        triggerManualSync();
-    }, 4000);
+    setTimeout(() => { isReconnecting = false; triggerManualSync(); }, 4000);
 }
 
 window.triggerManualSync = function() {
@@ -153,10 +136,7 @@ window.triggerManualSync = function() {
     db.goOffline();
     setTimeout(() => {
         db.goOnline();
-        setTimeout(() => {
-            showToast("✅ Allineato");
-            isReconnecting = false;
-        }, 2500); 
+        setTimeout(() => { showToast("✅ Allineato"); isReconnecting = false; }, 2500); 
     }, 500);
 }
 
@@ -173,10 +153,6 @@ function refreshUI() {
     applyTheme();
     updateCartBadge();
     const activeBtn = document.querySelector('.nav-btn.active');
-    
-    // FIX SFONDO INIZIALE:
-    // Se c'è un bottone attivo (es. cambio tab), usalo.
-    // Altrimenti (avvio app), forza navTo('carrello') per applicare lo stile notepad.
     if(activeBtn) {
         const onclickAttr = activeBtn.getAttribute('onclick');
         if(onclickAttr) {
@@ -184,7 +160,6 @@ function refreshUI() {
             navTo(sectionName);
         }
     } else {
-        // Se non c'è selezione, siamo all'avvio: forza il carrello E lo stile
         navTo('carrello');
     }
 }
@@ -222,18 +197,14 @@ function navTo(section) {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     currentSearchTerm = "";
     
-    // Gestione Stile Notepad
     if(section !== 'carrello') {
         const btn = document.querySelector(`button[onclick="navTo('${section}')"]`);
         if(btn) btn.classList.add('active');
         document.getElementById('main-content').classList.remove('notepad-mode');
     } else {
-        // Qui aggiungiamo la classe, e poiché navTo è chiamato da refreshUI all'avvio, 
-        // lo sfondo apparirà subito.
         document.getElementById('main-content').classList.add('notepad-mode');
-        // Attiva visivamente il bottone del carrello
         const cartBtn = document.querySelector('.cart-main-btn');
-        if(cartBtn) cartBtn.classList.add('active'); // Opzionale, se vuoi stile attivo sul carrello
+        if(cartBtn) cartBtn.classList.add('active');
     }
 
     const headerTitle = document.getElementById('page-title');
@@ -258,20 +229,26 @@ function navTo(section) {
     }
 }
 
-// --- RENDER CARRELLO ---
+// --- RENDER CARRELLO (MODIFICATO CON BOTTONE VELOCE) ---
 function renderCart() {
     const main = document.getElementById('main-content');
     const container = document.createElement('div');
     container.className = 'notepad-content'; 
     main.innerHTML = ''; main.appendChild(container);
 
+    // 1. Bottone Aggiunta Veloce
+    const quickAddBtn = document.createElement('button');
+    quickAddBtn.className = 'btn-quick-add';
+    quickAddBtn.innerHTML = '<i class="fas fa-plus"></i> Aggiungi voce veloce';
+    quickAddBtn.onclick = () => openAddModal(null, 'Altro'); // Null attiva modalità manuale
+    container.appendChild(quickAddBtn);
+
     const fullList = (appState.lists && appState.lists[appState.currentList]) ? appState.lists[appState.currentList] : [];
-    
     const activeList = fullList.filter(i => !i.checked);
     const completedList = fullList.filter(i => i.checked);
 
     if(activeList.length === 0 && completedList.length === 0) { 
-        container.innerHTML = '<div style="text-align:center; color:gray; margin-top:50px;">Carrello vuoto</div>'; 
+        container.innerHTML += '<div style="text-align:center; color:gray; margin-top:50px;">Lista vuota</div>'; 
         return; 
     }
 
@@ -374,15 +351,37 @@ function fallbackWhatsApp(text) {
     }
 }
 
-// --- MODAL & LOGIC ---
+// --- MODAL & LOGIC (MODIFICATO PER GESTIRE MANUALI) ---
 function openAddModal(name, cat) {
-    itemToEdit = { name, category: cat };
-    document.getElementById('modal-item-name').innerText = name || "Nuovo";
+    const isManual = (name === null);
+    
+    // Configura elemento da editare
+    itemToEdit = { name: name, category: cat, isManual: isManual };
+
+    // Gestione UI Modale
+    const h3 = document.getElementById('modal-item-name');
+    const input = document.getElementById('modal-custom-name');
+
+    if (isManual) {
+        h3.style.display = 'none';
+        input.style.display = 'block';
+        input.value = "";
+        input.focus();
+    } else {
+        h3.style.display = 'block';
+        h3.innerText = name;
+        input.style.display = 'none';
+    }
+
     const sel = document.getElementById('modal-store');
     sel.innerHTML = '';
     (appState.stores || []).forEach(s => { const o = document.createElement('option'); o.text = s; sel.add(o); });
     
-    const existing = (appState.lists[appState.currentList] || []).find(c => c.name === name && !c.checked);
+    // Se stiamo modificando un item esistente nella lista
+    let existing = null;
+    if(!isManual) {
+        existing = (appState.lists[appState.currentList] || []).find(c => c.name === name && !c.checked);
+    }
 
     if (existing) {
         sel.value = existing.store;
@@ -390,7 +389,8 @@ function openAddModal(name, cat) {
         document.getElementById('modal-unit').value = existing.unit;
         document.getElementById('modal-notes').value = existing.note;
     } else {
-        sel.value = appState.settings.defaultStores[cat] || appState.stores[0];
+        // Default
+        sel.value = appState.settings.defaultStores[cat] || "Altro";
         document.getElementById('modal-qty').value = "1";
         document.getElementById('modal-unit').value = "pz";
         document.getElementById('modal-notes').value = "";
@@ -405,15 +405,23 @@ function addToCartConfirm() {
     if(!appState.lists) appState.lists = {};
     if(!appState.lists[l]) appState.lists[l] = [];
     
-    if(!appState.inventory[itemToEdit.category].includes(itemToEdit.name)) {
-        appState.inventory[itemToEdit.category].push(itemToEdit.name);
+    // Determina il nome
+    let finalName = itemToEdit.name;
+    if (itemToEdit.isManual) {
+        finalName = document.getElementById('modal-custom-name').value.trim();
+        if(!finalName) { alert("Inserisci un nome!"); return; }
+    }
+
+    // Se NON è manuale, lo aggiungiamo all'inventario globale se manca
+    if(!itemToEdit.isManual && !appState.inventory[itemToEdit.category].includes(finalName)) {
+        appState.inventory[itemToEdit.category].push(finalName);
         appState.inventory[itemToEdit.category].sort();
     }
 
     const item = {
         id: Date.now(),
-        name: itemToEdit.name,
-        category: itemToEdit.category,
+        name: finalName,
+        category: itemToEdit.category || "Altro",
         qty: document.getElementById('modal-qty').value,
         unit: document.getElementById('modal-unit').value,
         store: document.getElementById('modal-store').value,
@@ -421,13 +429,11 @@ function addToCartConfirm() {
         checked: false
     };
 
+    // Se esiste già con lo stesso nome (e non spuntato), lo sovrascriviamo
     const idx = appState.lists[l].findIndex(i => i.name === item.name && !i.checked);
     if(idx > -1) appState.lists[l].splice(idx, 1);
     
     appState.lists[l].push(item);
-    
-    document.getElementById('modal-qty').value = "1";
-    document.getElementById('modal-notes').value = "";
     
     saveState(); closeModal();
 }
@@ -583,7 +589,7 @@ function renderListsParams() {
 }
 
 function switchList(name) { appState.currentList = name; saveState(); navTo('carrello'); }
-function createNewList() { const name = prompt("Nome della nuova lista:"); if(name) { if(!appState.lists) appState.lists = {}; if(!appState.lists[name]) { appState.lists[name] = [{ id: Date.now(), name: "Nuova Lista", qty: 1, unit: "", store: "", note: "Inizia ad aggiungere...", checked: false }]; appState.currentList = name; saveState(); navTo('carrello'); } else { alert("Esiste già una lista con questo nome."); } } }
+function createNewList() { const name = prompt("Nome della nuova lista (es. Commissioni):"); if(name) { if(!appState.lists) appState.lists = {}; if(!appState.lists[name]) { appState.lists[name] = []; appState.currentList = name; saveState(); navTo('carrello'); } else { alert("Esiste già una lista con questo nome."); } } }
 
 function renderOptions() {
     const main = document.getElementById('main-content');
