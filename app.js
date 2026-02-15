@@ -419,7 +419,7 @@ function addToCartConfirm() {
     }
 
     const item = {
-        id: Date.now(),
+        id: Date.now(), // ID univoco sempre nuovo
         name: finalName,
         category: itemToEdit.category || "Altro",
         qty: document.getElementById('modal-qty').value,
@@ -429,13 +429,12 @@ function addToCartConfirm() {
         checked: false
     };
 
-    // Se esiste già con lo stesso nome (e non spuntato), lo sovrascriviamo
-    const idx = appState.lists[l].findIndex(i => i.name === item.name && !i.checked);
-    if(idx > -1) appState.lists[l].splice(idx, 1);
-    
+    // MODIFICA: Ora facciamo sempre PUSH. 
+    // Non controlliamo più se esiste il nome (findIndex), così puoi avere doppi.
     appState.lists[l].push(item);
     
-    saveState(); closeModal();
+    saveState(); 
+    closeModal();
 }
 
 // --- GESTIONE DELETE ---
@@ -589,7 +588,33 @@ function renderListsParams() {
 }
 
 function switchList(name) { appState.currentList = name; saveState(); navTo('carrello'); }
-function createNewList() { const name = prompt("Nome della nuova lista (es. Commissioni):"); if(name) { if(!appState.lists) appState.lists = {}; if(!appState.lists[name]) { appState.lists[name] = []; appState.currentList = name; saveState(); navTo('carrello'); } else { alert("Esiste già una lista con questo nome."); } } }
+
+function createNewList() { 
+const name = prompt("Nome della nuova lista (es. Commissioni):"); 
+    if(name) { 
+        if(!appState.lists) appState.lists = {}; 
+        
+        if(!appState.lists[name]) { 
+            // FIX: Creiamo la lista con un elemento "placeholder" così non è vuota
+            appState.lists[name] = [{
+                id: Date.now(),
+                name: "Nuova voce",
+                category: "altro",
+                qty: 1,
+                unit: "pz",
+                store: "Altro",
+                note: "Modificami",
+                checked: false
+            }];
+            
+            appState.currentList = name; 
+            saveState(); 
+            navTo('carrello'); 
+        } else { 
+            alert("Esiste già una lista con questo nome."); 
+        } 
+    } 
+}
 
 function renderOptions() {
     const main = document.getElementById('main-content');
