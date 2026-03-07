@@ -247,7 +247,12 @@ function renderCart() {
     const completedList = fullList.filter(i => i.checked);
 
     if(activeList.length === 0 && completedList.length === 0) { 
-        container.innerHTML += '<div style="text-align:center; color:gray; margin-top:50px;">Lista vuota</div>'; 
+        // FIX: Creiamo il testo "Lista vuota" senza sovrascrivere l'HTML,
+        // così il bottone in alto non perde l'evento del click!
+        const emptyDiv = document.createElement('div');
+        emptyDiv.style.cssText = "text-align:center; color:gray; margin-top:50px;";
+        emptyDiv.innerText = "Lista vuota";
+        container.appendChild(emptyDiv);
         return; 
     }
 

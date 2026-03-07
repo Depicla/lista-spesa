@@ -58,7 +58,8 @@ main {
     width: 100%; position: fixed; bottom: 0 !important; left: 0;
     height: auto; 
     padding-top: 8px; 
-    padding-bottom: env(safe-area-inset-bottom); 
+    /* Spazio forzato a 15px invece della safe-area gigante di Apple */
+    padding-bottom: 15px; 
     z-index: 200; touch-action: none;
 }
 .nav-btn {
