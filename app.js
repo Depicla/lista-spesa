@@ -1,4 +1,4 @@
-/* SHOPPING_LIST_REV.29_QUICK_ADD */
+/* SHOPPING_LIST_REV.31_FULL_UPDATE */
 
 // --- 1. CONFIGURAZIONE FIREBASE ---
 const firebaseConfig = {
@@ -61,7 +61,7 @@ const fullSeasonalData = {
 const defaultData = {
     lists: { "Shopping List": [] },
     currentList: "Shopping List",
-    stores: ["Supermercato", "Frutteto", "Altro", "Farmacia", "Posta"], // Aggiungo qualche negozio utile
+    stores: ["Supermercato", "Frutteto", "Altro", "Farmacia", "Posta"],
     inventory: {
         frutta: [], verdura: [],
         latticini: ["Latte", "Burro", "Yogurt", "Formaggio", "Mozzarella", "Panna", "Parmigiano", "Ricotta"],
@@ -75,10 +75,10 @@ let appState = JSON.parse(JSON.stringify(defaultData));
 let itemToDelete = null;
 let itemToEdit = null;
 let currentSearchTerm = "";
+let editingCartItemId = null; // NOVITÀ: Per la modifica rapida dal carrello
 
 // --- AVVIO E SYNC ---
 document.addEventListener('DOMContentLoaded', () => {
-    
     setTimeout(() => {
         const loader = document.getElementById('loading-overlay');
         if(loader && loader.style.display !== 'none') {
@@ -229,18 +229,17 @@ function navTo(section) {
     }
 }
 
-// --- RENDER CARRELLO (MODIFICATO CON BOTTONE VELOCE) ---
+// --- RENDER CARRELLO ---
 function renderCart() {
     const main = document.getElementById('main-content');
     const container = document.createElement('div');
     container.className = 'notepad-content'; 
     main.innerHTML = ''; main.appendChild(container);
 
-    // 1. Bottone Aggiunta Veloce
     const quickAddBtn = document.createElement('button');
     quickAddBtn.className = 'btn-quick-add';
     quickAddBtn.innerHTML = '<i class="fas fa-plus"></i> Aggiungi voce veloce';
-    quickAddBtn.onclick = () => openAddModal(null, 'Altro'); // Null attiva modalità manuale
+    quickAddBtn.onclick = () => openAddModal(null, 'Altro');
     container.appendChild(quickAddBtn);
 
     const fullList = (appState.lists && appState.lists[appState.currentList]) ? appState.lists[appState.currentList] : [];
@@ -269,6 +268,7 @@ function renderCart() {
                     <span class="cart-item-note">${item.note}</span>
                 </div>
                 <div class="cart-actions-btn">
+                    <i class="fas fa-pen btn-edit" onclick="editCartItem(${item.id})"></i>
                     <i class="fas fa-trash btn-remove" onclick="askDeleteCartItem(${item.id})"></i>
                     <i class="far fa-check-circle btn-check" onclick="checkItem(${item.id})"></i>
                 </div>
@@ -351,14 +351,13 @@ function fallbackWhatsApp(text) {
     }
 }
 
-// --- MODAL & LOGIC (MODIFICATO PER GESTIRE MANUALI) ---
+// --- MODAL & LOGIC ---
 function openAddModal(name, cat) {
-    const isManual = (name === null);
+    editingCartItemId = null; // Reset per nuova aggiunta
     
-    // Configura elemento da editare
+    const isManual = (name === null);
     itemToEdit = { name: name, category: cat, isManual: isManual };
 
-    // Gestione UI Modale
     const h3 = document.getElementById('modal-item-name');
     const input = document.getElementById('modal-custom-name');
 
@@ -377,7 +376,6 @@ function openAddModal(name, cat) {
     sel.innerHTML = '';
     (appState.stores || []).forEach(s => { const o = document.createElement('option'); o.text = s; sel.add(o); });
     
-    // Se stiamo modificando un item esistente nella lista
     let existing = null;
     if(!isManual) {
         existing = (appState.lists[appState.currentList] || []).find(c => c.name === name && !c.checked);
@@ -389,12 +387,39 @@ function openAddModal(name, cat) {
         document.getElementById('modal-unit').value = existing.unit;
         document.getElementById('modal-notes').value = existing.note;
     } else {
-        // Default
         sel.value = appState.settings.defaultStores[cat] || "Altro";
         document.getElementById('modal-qty').value = "1";
         document.getElementById('modal-unit').value = "pz";
         document.getElementById('modal-notes').value = "";
     }
+    document.getElementById('add-modal').style.display = 'flex';
+}
+
+// NOVITÀ: FUNZIONE PER MODIFICARE ELEMENTO ESISTENTE
+function editCartItem(id) {
+    const list = appState.lists[appState.currentList];
+    const item = list.find(i => i.id === id);
+    if(!item) return;
+
+    editingCartItemId = id; // Salviamo l'ID che stiamo modificando
+    itemToEdit = { name: item.name, category: item.category || "altro", isManual: true }; 
+    
+    const h3 = document.getElementById('modal-item-name');
+    const input = document.getElementById('modal-custom-name');
+    
+    h3.style.display = 'none';
+    input.style.display = 'block';
+    input.value = item.name;
+
+    const sel = document.getElementById('modal-store');
+    sel.innerHTML = '';
+    (appState.stores || []).forEach(s => { const o = document.createElement('option'); o.text = s; sel.add(o); });
+    sel.value = item.store || "Altro";
+
+    document.getElementById('modal-qty').value = item.qty;
+    document.getElementById('modal-unit').value = item.unit;
+    document.getElementById('modal-notes').value = item.note || "";
+
     document.getElementById('add-modal').style.display = 'flex';
 }
 
@@ -405,46 +430,51 @@ function addToCartConfirm() {
     if(!appState.lists) appState.lists = {};
     if(!appState.lists[l]) appState.lists[l] = [];
     
-    // Determina il nome
     let finalName = itemToEdit.name;
-    if (itemToEdit.isManual) {
+    if (itemToEdit.isManual || editingCartItemId) {
         finalName = document.getElementById('modal-custom-name').value.trim();
         if(!finalName) { alert("Inserisci un nome!"); return; }
     }
 
-    // Se NON è manuale, lo aggiungiamo all'inventario globale se manca
-    if(!itemToEdit.isManual && !appState.inventory[itemToEdit.category].includes(finalName)) {
+    if(!itemToEdit.isManual && !editingCartItemId && !appState.inventory[itemToEdit.category].includes(finalName)) {
         appState.inventory[itemToEdit.category].push(finalName);
         appState.inventory[itemToEdit.category].sort();
     }
 
-    const item = {
-        id: Date.now(), // ID univoco sempre nuovo
-        name: finalName,
-        category: itemToEdit.category || "Altro",
-        qty: document.getElementById('modal-qty').value,
-        unit: document.getElementById('modal-unit').value,
-        store: document.getElementById('modal-store').value,
-        note: document.getElementById('modal-notes').value,
-        checked: false
-    };
-
-    // MODIFICA: Ora facciamo sempre PUSH. 
-    // Non controlliamo più se esiste il nome (findIndex), così puoi avere doppi.
-    appState.lists[l].push(item);
+    if (editingCartItemId) {
+        // MODIFICA ESISTENTE
+        const itemIndex = appState.lists[l].findIndex(i => i.id === editingCartItemId);
+        if (itemIndex > -1) {
+            appState.lists[l][itemIndex].name = finalName;
+            appState.lists[l][itemIndex].qty = document.getElementById('modal-qty').value;
+            appState.lists[l][itemIndex].unit = document.getElementById('modal-unit').value;
+            appState.lists[l][itemIndex].store = document.getElementById('modal-store').value;
+            appState.lists[l][itemIndex].note = document.getElementById('modal-notes').value;
+        }
+        editingCartItemId = null; // Reset
+    } else {
+        // NUOVO ELEMENTO
+        const item = {
+            id: Date.now(),
+            name: finalName,
+            category: itemToEdit.category || "Altro",
+            qty: document.getElementById('modal-qty').value,
+            unit: document.getElementById('modal-unit').value,
+            store: document.getElementById('modal-store').value,
+            note: document.getElementById('modal-notes').value,
+            checked: false
+        };
+        appState.lists[l].push(item);
+    }
     
-    saveState(); 
-    closeModal();
+    saveState(); closeModal();
 }
 
 // --- GESTIONE DELETE ---
 function askDeleteCartItem(id) { itemToDelete={type:'cart',id}; openConfirmModal("Rimuovere dal carrello?", false); }
 function askDeleteInventory(cat, name) { itemToDelete={type:'inv',cat,name}; openConfirmModal("Eliminare definitivamente?", false); }
 function askDeleteStore(name) { itemToDelete={type:'store',name}; openConfirmModal("Eliminare negozio?", false); }
-function askDeleteSeasonItem(m, cat, name) { 
-    itemToDelete = { type:'seas', m, cat, name }; 
-    openConfirmModal(`Eliminare "${name}"?`, true); 
-}
+function askDeleteSeasonItem(m, cat, name) { itemToDelete={type:'seas',m,cat,name}; openConfirmModal(`Eliminare "${name}"?`, true); }
 
 function openConfirmModal(msg, showDeleteAll) {
     document.querySelector('#confirm-modal h3').innerText = "Attenzione";
@@ -468,13 +498,11 @@ function openConfirmModal(msg, showDeleteAll) {
 
 function confirmDeleteAll() {
     if(itemToDelete && itemToDelete.type === 'seas') {
-        const cat = itemToDelete.cat; 
-        const name = itemToDelete.name;
+        const cat = itemToDelete.cat; const name = itemToDelete.name;
         const arrMonth = appState.seasonalData[cat][itemToDelete.m];
         const idxM = arrMonth.indexOf(name);
         if(idxM > -1) arrMonth.splice(idxM, 1);
-        const globalCat = cat.toLowerCase(); 
-        const arrInv = appState.inventory[globalCat];
+        const globalCat = cat.toLowerCase(); const arrInv = appState.inventory[globalCat];
         if(arrInv) {
             const idxI = arrInv.indexOf(name);
             if(idxI > -1) { arrInv.splice(idxI, 1); alert(`Eliminato ${name} anche dalla lista principale.`); }
@@ -590,12 +618,10 @@ function renderListsParams() {
 function switchList(name) { appState.currentList = name; saveState(); navTo('carrello'); }
 
 function createNewList() { 
-const name = prompt("Nome della nuova lista (es. Commissioni):"); 
+    const name = prompt("Nome della nuova lista (es. Commissioni):"); 
     if(name) { 
         if(!appState.lists) appState.lists = {}; 
-        
         if(!appState.lists[name]) { 
-            // FIX: Creiamo la lista con un elemento "placeholder" così non è vuota
             appState.lists[name] = [{
                 id: Date.now(),
                 name: "Nuova voce",
@@ -606,7 +632,6 @@ const name = prompt("Nome della nuova lista (es. Commissioni):");
                 note: "Modificami",
                 checked: false
             }];
-            
             appState.currentList = name; 
             saveState(); 
             navTo('carrello'); 
