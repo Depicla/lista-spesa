@@ -648,12 +648,26 @@ function createNewList() {
 
 function renderOptions() {
     const main = document.getElementById('main-content');
+    // Recupera la data dell'ultimo backup, se non esiste scrive "Mai eseguito"
+    const lastBackupStr = appState.lastBackup ? appState.lastBackup : 'Mai eseguito';
+
     main.innerHTML = `
         <div style="padding:15px;">
             <p style="text-align:center; color:green;"><b>☁️ Cloud Sync Attivo</b></p>
+            
+            <!-- NUOVA SEZIONE BACKUP -->
+            <h3>Backup Dati</h3>
+            <div class="item-row" style="flex-direction:column; align-items:flex-start; gap:10px;">
+                <span style="font-size:14px;">Ultimo backup: <b>${lastBackupStr}</b></span>
+                <button onclick="downloadBackup()" class="confirm-btn" style="width:100%; padding:10px;">📥 Scarica Backup (JSON)</button>
+            </div>
+
             <h3>Generale</h3><button onclick="toggleTheme()" class="item-row" style="width:100%; justify-content:center;">Cambia Tema</button>
+            
             <h3>Negozi</h3><div class="item-row" style="flex-wrap:wrap; gap:5px;">${(appState.stores || []).map(s => `<span style="background:#eee; padding:3px 8px; border-radius:10px; font-size:12px;">${s} <i class="fas fa-times" onclick="askDeleteStore('${s}')" style="color:red;"></i></span>`).join('')}</div><button onclick="addStore()" style="margin-top:5px; padding:5px;">+ Aggiungi Negozio</button>
+            
             <h3>Prodotti Manuali</h3><input type="text" id="new-prod-name" placeholder="Nome" style="width:100%; padding:8px;"><select id="new-prod-cat" style="width:100%; margin-top:5px; padding:8px;"><option value="frutta">Frutta</option><option value="verdura">Verdura</option><option value="latticini">Latticini</option><option value="altro">Altro</option></select><button onclick="addManualProduct()" class="confirm-btn" style="width:100%; margin-top:10px; padding:10px;">Salva Prodotto</button>
+            
             <hr style="margin:20px 0;"><button onclick="forceReset()" style="width:100%; padding:15px; background:red; color:white; border:none; border-radius:10px;">⚠️ RESETTA DATABASE</button>
         </div>`;
 }
@@ -665,3 +679,31 @@ function enterApp() { document.getElementById('welcome-screen').classList.remove
 function toggleTheme() { appState.settings.theme = appState.settings.theme==='light'?'dark':'light'; saveState(); }
 function applyTheme() { document.body.setAttribute('data-theme', appState.settings.theme); }
 function updateCartBadge() { const list = (appState.lists && appState.lists[appState.currentList]) ? appState.lists[appState.currentList] : []; const count = list.filter(i => !i.checked).length; const badge = document.getElementById('cart-badge'); if(count > 0) { badge.style.display = 'flex'; badge.innerText = count; } else { badge.style.display = 'none'; } }
+
+// --- FUNZIONE DI BACKUP ---
+function downloadBackup() {
+    // 1. Formatta la data e l'ora attuale
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('it-IT') + ' alle ' + now.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
+    
+    // 2. Salva la data nel database
+    appState.lastBackup = dateStr;
+    saveState();
+    
+    // 3. Prepara il file da scaricare (JSON)
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+    const downloadNode = document.createElement('a');
+    downloadNode.setAttribute("href", dataStr);
+    
+    // Nome del file con la data per distinguerli
+    const fileDate = now.toISOString().split('T')[0];
+    downloadNode.setAttribute("download", `shopping_list_backup_${fileDate}.json`);
+    
+    // 4. Avvia il download e aggiorna la schermata
+    document.body.appendChild(downloadNode);
+    downloadNode.click();
+    downloadNode.remove();
+    
+    renderOptions();
+    showToast("✅ Backup scaricato con successo!");
+}
