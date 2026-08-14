@@ -1,4 +1,4 @@
-/* SHOPPING_LIST_REV.32_PHOTO_UPLOAD */
+/* SHOPPING_LIST_REV.33_FINAL */
 
 // --- 1. CONFIGURAZIONE FIREBASE ---
 const firebaseConfig = {
@@ -30,8 +30,8 @@ let itemToDelete = null;
 let itemToEdit = null;
 let currentSearchTerm = "";
 let editingCartItemId = null; 
-let currentItemImage = null; // NOVITÀ
-let wakeLock = null; // Variabile per lo schermo sempre acceso
+let currentItemImage = null; 
+let wakeLock = null; 
 
 // --- DATI DEFAULT ---
 const fullSeasonalData = {
@@ -69,7 +69,7 @@ const defaultData = {
     lists: { "Shopping List": [] },
     currentList: "Shopping List",
     stores: ["Supermercato", "Frutteto", "Altro", "Farmacia", "Posta"],
-    itemImages: {}, // NOVITÀ
+    itemImages: {}, 
     inventory: {
         frutta: [], verdura: [],
         latticini: ["Latte", "Burro", "Yogurt", "Formaggio", "Mozzarella", "Panna", "Parmigiano", "Ricotta"],
@@ -100,10 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         window.addEventListener('online', () => { performDoubleSync("Rete rilevata"); });
+        
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === 'visible') { 
                 performDoubleSync("App attiva"); 
-                // Se la lampadina era accesa, la riattiviamo in automatico
                 if (wakeLock !== null && document.getElementById('btn-wakelock').classList.contains('active-lock')) {
                     requestWakeLock();
                 }
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!appState.lists[appState.currentList]) appState.currentList = Object.keys(appState.lists)[0] || "Shopping List";
                 if (!appState.seasonalData) appState.seasonalData = JSON.parse(JSON.stringify(fullSeasonalData));
                 if (!appState.inventory) appState.inventory = JSON.parse(JSON.stringify(defaultData.inventory));
-                if (!appState.itemImages) appState.itemImages = {}; // FIX per vecchi utenti
+                if (!appState.itemImages) appState.itemImages = {}; 
                 populateInventoryFromSeason();
             } else {
                 restoreDefaults();
@@ -304,7 +304,7 @@ function renderCart() {
             </div>
         `;
         completedList.forEach(item => {
-            const imgHtml = item.image ? `<img src="${item.image}" class="cart-item-image" style="opacity:0.5;">` : '';
+            const imgHtml = item.image ? `<img src="${item.image}" class="cart-item-image" style="opacity:0.5;" onclick="showFullImage('${item.image}')">` : '';
             completedHtml += `
                 <div class="cart-item is-completed">
                     <div class="cart-item-content-wrapper">
@@ -592,8 +592,10 @@ function renderListSection(category) {
         const isSeasonal = seasonItems.includes(item);
         const inCart = currentCart.find(c => c.name === item && !c.checked);
         
-        // Se c'è un'immagine salvata, mostriamo un'iconina
-        const hasSavedImage = (appState.itemImages && appState.itemImages[item]) ? '<i class="fas fa-image" style="color:var(--border-color); font-size:10px; margin-left:5px;"></i>' : '';
+        // NUOVO: Rende l'icona cliccabile per rimuovere la foto dall'inventario
+        const safeItemName = item.replace(/'/g, "\\'");
+        const hasSavedImage = (appState.itemImages && appState.itemImages[item]) ? 
+            `<i class="fas fa-image" style="color:var(--accent-color); font-size:16px; margin-left:8px; cursor:pointer;" onclick="askRemoveSavedImage('${safeItemName}')"></i>` : '';
 
         const div = document.createElement('div');
         div.className = 'item-row';
@@ -606,7 +608,7 @@ function renderListSection(category) {
             </div>
             <div class="item-actions">
                 <button class="btn-del" onclick="askDeleteInventory('${category}', '${item}')"><i class="fas fa-trash"></i></button>
-                <button class="btn-add" onclick="openAddModal('${item}', '${category}')"><i class="fas fa-plus-circle"></i></button>
+                <button class="btn-add" onclick="openAddModal('${safeItemName}', '${category}')"><i class="fas fa-plus-circle"></i></button>
             </div>
         `;
         main.appendChild(div);
@@ -619,7 +621,6 @@ function handleSearch(val, cat) {
     const searchInput = document.querySelector('.search-input');
     if (searchInput) {
         searchInput.focus();
-        // Sposta il cursore esattamente alla fine del testo
         const len = searchInput.value.length;
         searchInput.setSelectionRange(len, len);
     }
@@ -757,9 +758,36 @@ function setupImageModalState(base64Image) {
     }
 }
 
+// NUOVO: Mostra l'immagine nel visore interno invece che aprire una nuova scheda
 function showFullImage(src) {
-    const w = window.open("");
-    w.document.write(`<img src="${src}" style="width:100%; height:auto;">`);
+    document.getElementById('full-viewer-img').src = src;
+    document.getElementById('image-viewer-modal').style.display = 'flex';
+}
+
+// NUOVO: Chiude il visore interno
+function closeImageViewer() {
+    document.getElementById('image-viewer-modal').style.display = 'none';
+}
+
+// NUOVO: Rimuove l'immagine predefinita direttamente dall'inventario
+function askRemoveSavedImage(name) {
+    if(confirm(`Vuoi rimuovere la foto salvata per "${name}"?`)) {
+        if(appState.itemImages && appState.itemImages[name]) {
+            delete appState.itemImages[name];
+            saveState();
+            
+            // Ridisegna la sezione corrente per far sparire l'icona
+            const activeBtn = document.querySelector('.nav-btn.active');
+            if(activeBtn) {
+                const sectionName = activeBtn.getAttribute('onclick').match(/'([^']+)'/)[1];
+                if(sectionName !== 'carrello' && sectionName !== 'liste' && sectionName !== 'opzioni' && sectionName !== 'stagione') {
+                    renderListSection(sectionName);
+                } else {
+                    refreshUI();
+                }
+            }
+        }
+    }
 }
 
 function downloadBackup() {
@@ -791,7 +819,7 @@ async function requestWakeLock() {
         const btn = document.getElementById('btn-wakelock');
         if (btn) {
             btn.classList.add('active-lock');
-            btn.innerHTML = '<i class="fas fa-lightbulb"></i>'; // Icona piena
+            btn.innerHTML = '<i class="fas fa-lightbulb"></i>'; 
         }
     } catch (err) {
         console.error(`${err.name}, ${err.message}`);
@@ -805,7 +833,7 @@ function releaseWakeLock() {
             const btn = document.getElementById('btn-wakelock');
             if (btn) {
                 btn.classList.remove('active-lock');
-                btn.innerHTML = '<i class="far fa-lightbulb"></i>'; // Icona vuota
+                btn.innerHTML = '<i class="far fa-lightbulb"></i>'; 
             }
         });
     }

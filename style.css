@@ -41,7 +41,10 @@ header {
     z-index: 100; touch-action: none; width: 100%;
 }
 header h2 { margin: 0; font-size: 18px; }
-.header-actions button { background: none; border: none; font-size: 20px; color: var(--accent-color); margin-left: 15px; }
+.header-actions button { background: none; border: none; font-size: 20px; color: var(--accent-color); margin-left: 15px; cursor: pointer; }
+
+/* STILE WAKE LOCK (SCHERMO ACCESO) */
+#btn-wakelock.active-lock { color: #ffcc00; }
 
 /* MAIN */
 main {
@@ -105,7 +108,7 @@ main {
 .item-name { font-weight: 500; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .season-icon { color: orange; margin-left: 5px; font-size: 10px; }
 .in-cart-indicator { background: var(--accent-color); color: white; font-size: 9px; padding: 2px 5px; border-radius: 8px; margin-left: 8px; white-space: nowrap; }
-.item-actions button { background: none; border: none; padding: 5px 8px; font-size: 18px; }
+.item-actions button { background: none; border: none; padding: 5px 8px; font-size: 18px; cursor: pointer; }
 .btn-add { color: var(--accent-color); }
 .btn-del { color: var(--border-color); }
 
@@ -141,15 +144,15 @@ main {
 .qty-row { display: flex; gap: 10px; }
 .qty-group, .unit-group { flex: 1; }
 .modal-actions { margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px; }
-.modal-actions button { padding: 10px 15px; border-radius: 8px; border: none; font-weight: bold; }
+.modal-actions button { padding: 10px 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
 .confirm-btn { background: var(--accent-color); color: white; }
 .delete-all-btn { background: var(--danger-color); color: white; margin-right: auto; }
 .cancel-btn { background: var(--border-color); color: var(--text-color); }
 
 /* STILI PER FOTO */
 .btn-image-upload { width: 100%; padding: 10px; background-color: var(--card-color); color: var(--text-color); border: 1px dashed var(--accent-color); border-radius: 8px; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; }
-.cart-item-image { width: 45px; height: 45px; border-radius: 8px; object-fit: cover; margin-right: 12px; border: 1px solid var(--border-color); flex-shrink: 0; }
+.cart-item-image { width: 45px; height: 45px; border-radius: 8px; object-fit: cover; margin-right: 12px; border: 1px solid var(--border-color); flex-shrink: 0; cursor: pointer; }
 .cart-item-content-wrapper { display: flex; align-items: center; flex: 1; overflow: hidden; }
 
-/* STILE WAKE LOCK (SCHERMO ACCESO) */
-#btn-wakelock.active-lock { color: #ffcc00; }
+/* NUOVO VISORE FOTO A SCHERMO INTERO */
+.viewer-close-btn { position: absolute; top: max(20px, env(safe-area-inset-top)); right: 20px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 10001; }
