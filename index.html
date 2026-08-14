@@ -34,7 +34,9 @@
     <div id="app-screen" class="screen">
         <header>
             <h2 id="page-title">Shopping List</h2>
-            <div class="header-actions" id="cart-actions" style="display:none;">
+            <div class="header-actions" id="cart-actions" style="display:none; align-items:center;">
+                <!-- NUOVO TASTO WAKE LOCK -->
+                <button id="btn-wakelock" onclick="toggleWakeLock()" style="margin-right: 15px;"><i class="far fa-lightbulb"></i></button>
                 <button onclick="shareList()"><i class="fas fa-share-alt"></i></button>
             </div>
         </header>
@@ -65,6 +67,15 @@
             <h3 id="modal-item-name">Prodotto</h3>
             <input type="text" id="modal-custom-name" style="display:none; width:100%; font-weight:bold; font-size:18px; margin-bottom:10px; border:2px solid var(--accent-color);" placeholder="Cosa devi comprare?">
             
+            <div style="margin-bottom: 15px;">
+                <input type="file" id="modal-image-input" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+                <button class="btn-image-upload" onclick="document.getElementById('modal-image-input').click()"><i class="fas fa-camera"></i> Aggiungi Foto</button>
+                <div id="modal-image-preview" style="display:none; margin-top:10px; position:relative;">
+                    <img id="preview-img" src="" style="width:100%; max-height:120px; object-fit:contain; border-radius:8px; border:1px solid var(--border-color);">
+                    <button onclick="removeImage()" style="position:absolute; top:5px; right:5px; background:var(--danger-color); color:white; border:none; border-radius:50%; width:25px; height:25px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
             <label>Categoria</label><select id="modal-store"></select>
             
             <div class="qty-row">

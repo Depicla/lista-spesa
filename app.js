@@ -1,4 +1,4 @@
-/* SHOPPING_LIST_REV.31_FULL_UPDATE */
+/* SHOPPING_LIST_REV.32_PHOTO_UPLOAD */
 
 // --- 1. CONFIGURAZIONE FIREBASE ---
 const firebaseConfig = {
@@ -10,6 +10,7 @@ const firebaseConfig = {
     messagingSenderId: "1093770708174",
     appId: "1:1093770708174:web:f022b2d6d4dc007bcbbc9f"
 };
+
 // ---------------------------------------------------
 
 // Inizializza Firebase
@@ -25,6 +26,12 @@ try {
 
 let isDataLoaded = false;
 let isReconnecting = false; 
+let itemToDelete = null;
+let itemToEdit = null;
+let currentSearchTerm = "";
+let editingCartItemId = null; 
+let currentItemImage = null; // NOVITÀ
+let wakeLock = null; // Variabile per lo schermo sempre acceso
 
 // --- DATI DEFAULT ---
 const fullSeasonalData = {
@@ -62,6 +69,7 @@ const defaultData = {
     lists: { "Shopping List": [] },
     currentList: "Shopping List",
     stores: ["Supermercato", "Frutteto", "Altro", "Farmacia", "Posta"],
+    itemImages: {}, // NOVITÀ
     inventory: {
         frutta: [], verdura: [],
         latticini: ["Latte", "Burro", "Yogurt", "Formaggio", "Mozzarella", "Panna", "Parmigiano", "Ricotta"],
@@ -72,10 +80,6 @@ const defaultData = {
 };
 
 let appState = JSON.parse(JSON.stringify(defaultData));
-let itemToDelete = null;
-let itemToEdit = null;
-let currentSearchTerm = "";
-let editingCartItemId = null; // NOVITÀ: Per la modifica rapida dal carrello
 
 // --- AVVIO E SYNC ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -97,7 +101,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.addEventListener('online', () => { performDoubleSync("Rete rilevata"); });
         document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === 'visible') { performDoubleSync("App attiva"); }
+            if (document.visibilityState === 'visible') { 
+                performDoubleSync("App attiva"); 
+                // Se la lampadina era accesa, la riattiviamo in automatico
+                if (wakeLock !== null && document.getElementById('btn-wakelock').classList.contains('active-lock')) {
+                    requestWakeLock();
+                }
+            }
         });
 
         db.ref('shoppingApp_V12').on('value', (snapshot) => {
@@ -111,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!appState.lists[appState.currentList]) appState.currentList = Object.keys(appState.lists)[0] || "Shopping List";
                 if (!appState.seasonalData) appState.seasonalData = JSON.parse(JSON.stringify(fullSeasonalData));
                 if (!appState.inventory) appState.inventory = JSON.parse(JSON.stringify(defaultData.inventory));
+                if (!appState.itemImages) appState.itemImages = {}; // FIX per vecchi utenti
                 populateInventoryFromSeason();
             } else {
                 restoreDefaults();
@@ -218,11 +229,7 @@ function navTo(section) {
         case 'verdura': headerTitle.innerHTML = `Verdura ${currentDot}`; renderListSection('verdura'); break;
         case 'latticini': headerTitle.innerHTML = `Latticini ${currentDot}`; renderListSection('latticini'); break;
         case 'altro': headerTitle.innerHTML = `Altro ${currentDot}`; renderListSection('altro'); break;
-        case 'carrello': 
-            headerTitle.innerHTML = `${appState.currentList || "Shopping List"} ${currentDot}`; 
-            cartActions.style.display = 'flex'; 
-            renderCart(); 
-            break;
+        case 'carrello': headerTitle.innerHTML = `${appState.currentList || "Shopping List"} ${currentDot}`; cartActions.style.display = 'flex'; renderCart(); break;
         case 'stagione': headerTitle.innerHTML = `Stagionalità ${currentDot}`; renderSeason(); break;
         case 'liste': headerTitle.innerHTML = `Le tue Liste ${currentDot}`; renderListsParams(); break;
         case 'opzioni': headerTitle.innerHTML = `Opzioni ${currentDot}`; renderOptions(); break;
@@ -247,8 +254,6 @@ function renderCart() {
     const completedList = fullList.filter(i => i.checked);
 
     if(activeList.length === 0 && completedList.length === 0) { 
-        // FIX: Creiamo il testo "Lista vuota" senza sovrascrivere l'HTML,
-        // così il bottone in alto non perde l'evento del click!
         const emptyDiv = document.createElement('div');
         emptyDiv.style.cssText = "text-align:center; color:gray; margin-top:50px;";
         emptyDiv.innerText = "Lista vuota";
@@ -266,11 +271,17 @@ function renderCart() {
         grouped[store].forEach(item => {
             const div = document.createElement('div');
             div.className = 'cart-item';
+            
+            const imgHtml = item.image ? `<img src="${item.image}" class="cart-item-image" onclick="showFullImage('${item.image}')">` : '';
+
             div.innerHTML = `
-                <div class="cart-item-details">
-                    <span class="cart-item-name">${item.name}</span>
-                    <span class="cart-item-qty">${item.qty}${item.unit}</span>
-                    <span class="cart-item-note">${item.note}</span>
+                <div class="cart-item-content-wrapper">
+                    ${imgHtml}
+                    <div class="cart-item-details" style="${item.image ? 'border-left: none; padding-left: 0;' : ''}">
+                        <span class="cart-item-name">${item.name}</span>
+                        <span class="cart-item-qty">${item.qty}${item.unit}</span>
+                        <span class="cart-item-note">${item.note}</span>
+                    </div>
                 </div>
                 <div class="cart-actions-btn">
                     <i class="fas fa-pen btn-edit" onclick="editCartItem(${item.id})"></i>
@@ -293,12 +304,16 @@ function renderCart() {
             </div>
         `;
         completedList.forEach(item => {
+            const imgHtml = item.image ? `<img src="${item.image}" class="cart-item-image" style="opacity:0.5;">` : '';
             completedHtml += `
                 <div class="cart-item is-completed">
-                    <div class="cart-item-details">
-                        <span class="cart-item-name">${item.name}</span>
-                        <span class="cart-item-qty">${item.qty}${item.unit}</span>
-                        <span class="cart-item-note">${item.note}</span>
+                    <div class="cart-item-content-wrapper">
+                        ${imgHtml}
+                        <div class="cart-item-details" style="${item.image ? 'border-left: none; padding-left: 0;' : ''}">
+                            <span class="cart-item-name">${item.name}</span>
+                            <span class="cart-item-qty">${item.qty}${item.unit}</span>
+                            <span class="cart-item-note">${item.note}</span>
+                        </div>
                     </div>
                     <div class="cart-actions-btn">
                         <i class="fas fa-undo btn-restore" onclick="checkItem(${item.id})"></i>
@@ -356,10 +371,9 @@ function fallbackWhatsApp(text) {
     }
 }
 
-// --- MODAL & LOGIC ---
+// --- MODAL & LOGIC FOTO ---
 function openAddModal(name, cat) {
-    editingCartItemId = null; // Reset per nuova aggiunta
-    
+    editingCartItemId = null; 
     const isManual = (name === null);
     itemToEdit = { name: name, category: cat, isManual: isManual };
 
@@ -386,27 +400,30 @@ function openAddModal(name, cat) {
         existing = (appState.lists[appState.currentList] || []).find(c => c.name === name && !c.checked);
     }
 
+    const savedImage = (!isManual && appState.itemImages && appState.itemImages[name]) ? appState.itemImages[name] : null;
+
     if (existing) {
         sel.value = existing.store;
         document.getElementById('modal-qty').value = existing.qty;
         document.getElementById('modal-unit').value = existing.unit;
         document.getElementById('modal-notes').value = existing.note;
+        setupImageModalState(existing.image || savedImage);
     } else {
         sel.value = appState.settings.defaultStores[cat] || "Altro";
         document.getElementById('modal-qty').value = "1";
         document.getElementById('modal-unit').value = "pz";
         document.getElementById('modal-notes').value = "";
+        setupImageModalState(savedImage);
     }
     document.getElementById('add-modal').style.display = 'flex';
 }
 
-// NOVITÀ: FUNZIONE PER MODIFICARE ELEMENTO ESISTENTE
 function editCartItem(id) {
     const list = appState.lists[appState.currentList];
     const item = list.find(i => i.id === id);
     if(!item) return;
 
-    editingCartItemId = id; // Salviamo l'ID che stiamo modificando
+    editingCartItemId = id; 
     itemToEdit = { name: item.name, category: item.category || "altro", isManual: true }; 
     
     const h3 = document.getElementById('modal-item-name');
@@ -424,16 +441,17 @@ function editCartItem(id) {
     document.getElementById('modal-qty').value = item.qty;
     document.getElementById('modal-unit').value = item.unit;
     document.getElementById('modal-notes').value = item.note || "";
+    
+    setupImageModalState(item.image); 
 
     document.getElementById('add-modal').style.display = 'flex';
 }
-
-function closeModal() { document.getElementById('add-modal').style.display = 'none'; }
 
 function addToCartConfirm() {
     const l = appState.currentList;
     if(!appState.lists) appState.lists = {};
     if(!appState.lists[l]) appState.lists[l] = [];
+    if(!appState.itemImages) appState.itemImages = {};
     
     let finalName = itemToEdit.name;
     if (itemToEdit.isManual || editingCartItemId) {
@@ -446,8 +464,13 @@ function addToCartConfirm() {
         appState.inventory[itemToEdit.category].sort();
     }
 
+    if (!itemToEdit.isManual && currentItemImage) {
+        appState.itemImages[finalName] = currentItemImage;
+    } else if (!itemToEdit.isManual && !currentItemImage && appState.itemImages[finalName]) {
+        delete appState.itemImages[finalName];
+    }
+
     if (editingCartItemId) {
-        // MODIFICA ESISTENTE
         const itemIndex = appState.lists[l].findIndex(i => i.id === editingCartItemId);
         if (itemIndex > -1) {
             appState.lists[l][itemIndex].name = finalName;
@@ -455,10 +478,10 @@ function addToCartConfirm() {
             appState.lists[l][itemIndex].unit = document.getElementById('modal-unit').value;
             appState.lists[l][itemIndex].store = document.getElementById('modal-store').value;
             appState.lists[l][itemIndex].note = document.getElementById('modal-notes').value;
+            appState.lists[l][itemIndex].image = currentItemImage; 
         }
-        editingCartItemId = null; // Reset
+        editingCartItemId = null; 
     } else {
-        // NUOVO ELEMENTO
         const item = {
             id: Date.now(),
             name: finalName,
@@ -467,6 +490,7 @@ function addToCartConfirm() {
             unit: document.getElementById('modal-unit').value,
             store: document.getElementById('modal-store').value,
             note: document.getElementById('modal-notes').value,
+            image: currentItemImage,
             checked: false
         };
         appState.lists[l].push(item);
@@ -474,6 +498,8 @@ function addToCartConfirm() {
     
     saveState(); closeModal();
 }
+
+function closeModal() { document.getElementById('add-modal').style.display = 'none'; }
 
 // --- GESTIONE DELETE ---
 function askDeleteCartItem(id) { itemToDelete={type:'cart',id}; openConfirmModal("Rimuovere dal carrello?", false); }
@@ -565,11 +591,16 @@ function renderListSection(category) {
     list.forEach(item => {
         const isSeasonal = seasonItems.includes(item);
         const inCart = currentCart.find(c => c.name === item && !c.checked);
+        
+        // Se c'è un'immagine salvata, mostriamo un'iconina
+        const hasSavedImage = (appState.itemImages && appState.itemImages[item]) ? '<i class="fas fa-image" style="color:var(--border-color); font-size:10px; margin-left:5px;"></i>' : '';
+
         const div = document.createElement('div');
         div.className = 'item-row';
         div.innerHTML = `
             <div class="item-info">
                 <span class="item-name">${item}</span>
+                ${hasSavedImage}
                 ${isSeasonal ? '<i class="fas fa-sun season-icon"></i>' : ''}
                 ${inCart ? `<span class="in-cart-indicator">${inCart.qty} ${inCart.unit}</span>` : ''}
             </div>
@@ -582,7 +613,17 @@ function renderListSection(category) {
     });
 }
 
-function handleSearch(val, cat) { currentSearchTerm = val; renderListSection(cat); document.querySelector('.search-input').focus(); }
+function handleSearch(val, cat) { 
+    currentSearchTerm = val; 
+    renderListSection(cat); 
+    const searchInput = document.querySelector('.search-input');
+    if (searchInput) {
+        searchInput.focus();
+        // Sposta il cursore esattamente alla fine del testo
+        const len = searchInput.value.length;
+        searchInput.setSelectionRange(len, len);
+    }
+}
 
 function renderSeason() {
     const main = document.getElementById('main-content');
@@ -627,35 +668,20 @@ function createNewList() {
     if(name) { 
         if(!appState.lists) appState.lists = {}; 
         if(!appState.lists[name]) { 
-            appState.lists[name] = [{
-                id: Date.now(),
-                name: "Nuova voce",
-                category: "altro",
-                qty: 1,
-                unit: "pz",
-                store: "Altro",
-                note: "Modificami",
-                checked: false
-            }];
-            appState.currentList = name; 
-            saveState(); 
-            navTo('carrello'); 
-        } else { 
-            alert("Esiste già una lista con questo nome."); 
-        } 
+            appState.lists[name] = [{ id: Date.now(), name: "Nuova voce", category: "altro", qty: 1, unit: "pz", store: "Altro", note: "Modificami", checked: false }];
+            appState.currentList = name; saveState(); navTo('carrello'); 
+        } else { alert("Esiste già una lista con questo nome."); } 
     } 
 }
 
 function renderOptions() {
     const main = document.getElementById('main-content');
-    // Recupera la data dell'ultimo backup, se non esiste scrive "Mai eseguito"
     const lastBackupStr = appState.lastBackup ? appState.lastBackup : 'Mai eseguito';
 
     main.innerHTML = `
         <div style="padding:15px;">
             <p style="text-align:center; color:green;"><b>☁️ Cloud Sync Attivo</b></p>
             
-            <!-- NUOVA SEZIONE BACKUP -->
             <h3>Backup Dati</h3>
             <div class="item-row" style="flex-direction:column; align-items:flex-start; gap:10px;">
                 <span style="font-size:14px;">Ultimo backup: <b>${lastBackupStr}</b></span>
@@ -663,11 +689,8 @@ function renderOptions() {
             </div>
 
             <h3>Generale</h3><button onclick="toggleTheme()" class="item-row" style="width:100%; justify-content:center;">Cambia Tema</button>
-            
             <h3>Negozi</h3><div class="item-row" style="flex-wrap:wrap; gap:5px;">${(appState.stores || []).map(s => `<span style="background:#eee; padding:3px 8px; border-radius:10px; font-size:12px;">${s} <i class="fas fa-times" onclick="askDeleteStore('${s}')" style="color:red;"></i></span>`).join('')}</div><button onclick="addStore()" style="margin-top:5px; padding:5px;">+ Aggiungi Negozio</button>
-            
             <h3>Prodotti Manuali</h3><input type="text" id="new-prod-name" placeholder="Nome" style="width:100%; padding:8px;"><select id="new-prod-cat" style="width:100%; margin-top:5px; padding:8px;"><option value="frutta">Frutta</option><option value="verdura">Verdura</option><option value="latticini">Latticini</option><option value="altro">Altro</option></select><button onclick="addManualProduct()" class="confirm-btn" style="width:100%; margin-top:10px; padding:10px;">Salva Prodotto</button>
-            
             <hr style="margin:20px 0;"><button onclick="forceReset()" style="width:100%; padding:15px; background:red; color:white; border:none; border-radius:10px;">⚠️ RESETTA DATABASE</button>
         </div>`;
 }
@@ -680,30 +703,125 @@ function toggleTheme() { appState.settings.theme = appState.settings.theme==='li
 function applyTheme() { document.body.setAttribute('data-theme', appState.settings.theme); }
 function updateCartBadge() { const list = (appState.lists && appState.lists[appState.currentList]) ? appState.lists[appState.currentList] : []; const count = list.filter(i => !i.checked).length; const badge = document.getElementById('cart-badge'); if(count > 0) { badge.style.display = 'flex'; badge.innerText = count; } else { badge.style.display = 'none'; } }
 
-// --- FUNZIONE DI BACKUP ---
+// --- FUNZIONI GESTIONE IMMAGINE E BACKUP ---
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 400; 
+            const MAX_HEIGHT = 400;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+            } else {
+                if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+            }
+            
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            currentItemImage = canvas.toDataURL('image/jpeg', 0.6); 
+            
+            document.getElementById('preview-img').src = currentItemImage;
+            document.getElementById('modal-image-preview').style.display = 'block';
+            document.querySelector('.btn-image-upload').style.display = 'none';
+        }
+        img.src = e.target.result;
+    }
+    reader.readAsDataURL(file);
+}
+
+function removeImage() {
+    currentItemImage = null;
+    document.getElementById('modal-image-input').value = "";
+    document.getElementById('modal-image-preview').style.display = 'none';
+    document.querySelector('.btn-image-upload').style.display = 'flex';
+}
+
+function setupImageModalState(base64Image) {
+    currentItemImage = base64Image || null;
+    if (currentItemImage) {
+        document.getElementById('preview-img').src = currentItemImage;
+        document.getElementById('modal-image-preview').style.display = 'block';
+        document.querySelector('.btn-image-upload').style.display = 'none';
+    } else {
+        removeImage();
+    }
+}
+
+function showFullImage(src) {
+    const w = window.open("");
+    w.document.write(`<img src="${src}" style="width:100%; height:auto;">`);
+}
+
 function downloadBackup() {
-    // 1. Formatta la data e l'ora attuale
     const now = new Date();
     const dateStr = now.toLocaleDateString('it-IT') + ' alle ' + now.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
     
-    // 2. Salva la data nel database
     appState.lastBackup = dateStr;
     saveState();
     
-    // 3. Prepara il file da scaricare (JSON)
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
     const downloadNode = document.createElement('a');
     downloadNode.setAttribute("href", dataStr);
     
-    // Nome del file con la data per distinguerli
     const fileDate = now.toISOString().split('T')[0];
     downloadNode.setAttribute("download", `shopping_list_backup_${fileDate}.json`);
     
-    // 4. Avvia il download e aggiorna la schermata
     document.body.appendChild(downloadNode);
     downloadNode.click();
     downloadNode.remove();
     
     renderOptions();
     showToast("✅ Backup scaricato con successo!");
+}
+
+// --- FUNZIONI SCHERMO SEMPRE ACCESO (WAKE LOCK) ---
+async function requestWakeLock() {
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        const btn = document.getElementById('btn-wakelock');
+        if (btn) {
+            btn.classList.add('active-lock');
+            btn.innerHTML = '<i class="fas fa-lightbulb"></i>'; // Icona piena
+        }
+    } catch (err) {
+        console.error(`${err.name}, ${err.message}`);
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock !== null) {
+        wakeLock.release().then(() => {
+            wakeLock = null;
+            const btn = document.getElementById('btn-wakelock');
+            if (btn) {
+                btn.classList.remove('active-lock');
+                btn.innerHTML = '<i class="far fa-lightbulb"></i>'; // Icona vuota
+            }
+        });
+    }
+}
+
+function toggleWakeLock() {
+    if (!('wakeLock' in navigator)) {
+        showToast("⚠️ Il tuo browser non supporta questa funzione");
+        return;
+    }
+
+    if (wakeLock === null) {
+        requestWakeLock();
+        showToast("💡 Schermo sempre acceso: ATTIVATO");
+    } else {
+        releaseWakeLock();
+        showToast("💡 Schermo standard: RIPRISTINATO");
+    }
 }
